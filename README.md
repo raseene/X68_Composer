@@ -1,14 +1,16 @@
 # お手軽作曲ツール「作曲気分」
 
 コード進行に合わせて適当に音を置いて、４小節の短いメロディーを作って楽しむ X68000用のエンタメツールです。  
+
 動作確認はエミュレータ（XM6 TypeG）上で行っており、実機を含めたその他の環境での動作は未確認です。  
 動作は未確認ですが、一応 X68000 Z用に[起動ディスクのイメージ（XDFファイル）](https://github.com/raseene/X68_Composer/releases/latest/download/COMPOSER_XDF.zip)を用意しました。
 
 ![Screenshot](./images/Screen00.png)
+  
 
 ## 起動方法
 
-[実行ファイル一式](https://github.com/raseene/X68_Composer/releases/latest/download/COMPOSER.zip)
+　[実行ファイル一式](https://github.com/raseene/X68_Composer/releases/latest/download/COMPOSER.zip)
 
 
 ZMUSIC、または ZMSCを常駐させます。
@@ -52,7 +54,7 @@ SOUND\TONE.ZMD
 
 ![Screenshot](./images/Screen03.png)
 
-マウスで明るいボタンを押すとそこに音を配置して、ラインが通った時に音が鳴るようになります。　　
+マウスで明るいボタンを押すとそこに音を配置して、ラインが通った時に音が鳴るようになります。  
 また、そのときに付近のボタンが押せるようになったり、逆に押せなくなったりします。これによって、適当にボタンを押してもそれなりにメロディーになるようになってます。  
 すでに音が配置されたボタンを押して、その音を消すこともできます。このとき条件によって他の音のボタンも消えることがあります。
 
