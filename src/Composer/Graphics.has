@@ -1,0 +1,297 @@
+*----------------------------------------
+*
+*		グラフィック
+*
+*----------------------------------------
+
+	.include	iocscall.inc
+
+
+	.cpu	68000
+
+TEXT	equ	$e00000				* テキスト画面
+AC_SET	equ	$e8002a				* テキストアクセス
+
+
+	.text
+	.even
+
+*//////////////////////////////////////////////
+*    テキスト画面クリア
+*
+_clear_text::
+	suba.l	a1,a1
+	IOCS	__B_SUPER			* スーパーバイザモード
+	move.w	#$1_f0,AC_SET		* 同時アクセス
+
+	movea.l	#TEXT,a0
+	moveq.l	#0,d1
+	.rept	4
+	.rept	$20/4
+	move.l	d1,(a0)+
+	.endm
+	lea.l	$60(a0),a0
+	.endm
+
+	move.w	d1,AC_SET
+	tst.l	d0
+	bmi		@f
+	movea.l	d0,a1
+	IOCS	__B_SUPER			* ユーザーモード
+@@:
+
+	move.w	d3,d1
+	swap.w	d1
+	move.w	#$0001,d1
+	move.w	#63,d2
+	move.w	#$000f,d3
+	IOCS	__TXRASCPY
+	swap.w	d1
+	move.w	d1,d3
+	rts
+
+*///////////////////////////
+*    垂直同期割り込み
+*
+	.xref	_vsync_cnt			* 垂直同期カウンタ
+
+_v_sync::
+	add.w	#1,_vsync_cnt		* カウンタ増加
+	rte
+
+
+
+*///////////////////////////////////////////////
+*    文字列描画
+*		引数	 4(sp) = X座標（8dot単位）
+*				 8(sp) = Y座標
+*				12(sp) = テキスト
+*
+_draw_text::
+	move.w	6(sp),d0
+	move.l	8(sp),d1
+	movea.l	12(sp),a0
+	movem.l	d3-d5/a3,-(sp)
+
+	movea.l	#TEXT,a3			* テキストVRAM
+	adda.w	d0,a3
+	lsl.w	#7,d1
+	adda.l	d1,a3
+
+	suba.l	a1,a1
+	IOCS	__B_SUPER			* スーパーバイザモード
+	move.l	d0,d5
+
+	lea.l	text_buf(pc),a1
+	move.w	#$40*16/4-1,d0
+@@:
+	clr.l	(a1)+
+	dbra	d0,@b
+
+	lea.l	text_buf(pc),a1
+	moveq.l	#1-1,d3
+1:
+	moveq.l	#0,d1
+	move.b	(a0)+,d1
+	beq		10f					* 終端
+	bmi		2f					* シフトJIS
+
+3:
+	moveq.l	#8,d2				* ASCII
+	IOCS	__FNTADR
+	movea.l	d0,a2
+	moveq.l	#16-1,d0
+@@:
+	move.b	(a2)+,d1
+	move.b	d1,d2
+	lsr.b	#1,d2
+	or.b	d2,d1
+	move.b	d1,(a1)
+	lea.l	$40(a1),a1
+	dbra	d0,@b
+	lea.l	1-$400(a1),a1
+	addq.l	#1,d3
+	bra		1b
+
+2:								* シフトJIS
+	lsl.w	#8,d1
+	move.b	(a0)+,d1
+	cmpi.w	#$f400,d1
+	bcc		3b					* 半角外字
+
+	moveq.l	#8,d2
+	IOCS	__FNTADR
+	movea.l	d0,a2
+	moveq.l	#16-1,d0
+@@:
+	move.w	(a2)+,d1
+	move.w	d1,d2
+	lsr.w	#1,d2
+	or.w	d2,d1
+	move.w	d1,d2
+	lsr.w	#8,d2
+	move.b	d2,(a1)+
+	move.b	d1,(a1)
+	lea.l	$40-1(a1),a1
+	dbra	d0,@b
+	lea.l	2-$400(a1),a1
+	addq.l	#2,d3
+	bra		1b
+
+
+10:
+	lea.l	text_buf(pc),a2
+	moveq.l	#16-1,d0
+11:
+	movea.l	a3,a0
+	movea.l	a2,a1
+	move.w	d3,d1
+@@:
+	move.b	(a1)+,(a0)+
+	dbra	d1,@b
+	lea.l	$80(a3),a3
+	lea.l	$40(a2),a2
+	dbra	d0,11b
+
+	lea.l	text_buf+$40(pc),a2		* 影
+	moveq.l	#15-1,d0
+12:
+	moveq.l	#$40/4-1-1,d1
+@@:
+	move.l	-(a2),d2
+	move.l	-4(a2),d4
+	lsr.l	#1,d2
+	ror.l	#1,d4
+	andi.l	#$8000_0000,d4
+	or.l	d4,d2
+	move.l	d2,(a2)
+	dbra	d1,@b
+	move.l	-(a2),d2
+	lsr.l	#1,d2
+	move.l	d2,(a2)
+	lea.l	$80(a2),a2
+	dbra	d0,12b
+
+	adda.l	#$20080-$80*16,a3
+	lea.l	text_buf(pc),a2
+	moveq.l	#16-1,d0
+11:
+	movea.l	a3,a0
+	movea.l	a2,a1
+	move.w	d3,d1
+@@:
+	move.b	(a1)+,(a0)+
+	dbra	d1,@b
+	lea.l	$80(a3),a3
+	lea.l	$40(a2),a2
+	dbra	d0,11b
+
+	tst.l	d5
+	bmi		@f
+	movea.l	d5,a1
+	IOCS	__B_SUPER			* ユーザーモード
+@@:
+	movem.l	(sp)+,d3-d5/a3
+	rts
+
+
+	.bss
+	.even
+
+text_buf:
+	.ds.l	$400*16/4
+
+
+	.text
+	.even
+
+*///////////////////////////////////////////////
+*    パターン（64x48）描画
+*		引数	 4(sp) = X座標（8dot単位）
+*				 8(sp) = Y座標
+*				12(sp) = パターンデータ
+*
+_draw_pattern::
+	move.w	4+2(sp),d0
+	move.l	8(sp),d1
+	movea.l	12(sp),a1
+	movem.l	d3/a3-a4,-(sp)
+
+	movea.l	#TEXT,a2
+	adda.w	d0,a2
+	lsl.w	#7,d1
+	adda.l	d1,a2
+
+	lea.l	64/8*48(a1),a3
+	movea.l	a2,a4
+	adda.l	#$20000,a4
+
+	moveq.l	#64/8-1,d1
+	moveq.l	#48-1,d2
+	moveq.l	#$80-64/8,d3
+	IOCS	__VRAMPUT
+
+	movea.l	a3,a1
+	movea.l	a4,a2
+	moveq.l	#64/8-1,d1
+	moveq.l	#48-1,d2
+	moveq.l	#$80-64/8,d3
+	IOCS	__VRAMPUT
+
+	movem.l	(sp)+,d3/a3-a4
+	rts
+
+
+*///////////////////////////////////////////////
+*    １色パターン描画
+*		引数	 4(sp) = 幅（8dot単位）
+*				 8(sp) = 高さ
+*				12(sp) = パターンデータ
+*				16(sp) = テキストVRAM
+*
+_draw_mono_pattern::
+	move.w	4+2(sp),d1
+	move.w	8+2(sp),d2
+	movea.l	12(sp),a1
+	movea.l	16(sp),a2
+	movem.l	d3,-(sp)
+
+	move.l	#$80,d3
+	sub.w	d1,d3
+	subq.w	#1,d1
+	subq.w	#1,d2
+	IOCS	__VRAMPUT
+
+	movem.l	(sp)+,d3
+	rts
+
+
+*///////////////////////////////////////////////
+*    音符BG転送
+*
+	.xref	_bg_note			* 音符BG
+
+_draw_note_bg::
+	suba.l	a1,a1
+	IOCS	__B_SUPER			* スーパーバイザモード
+
+	movea.l	#$ebe000+8*0x80,a0
+	movea.l	#_bg_note,a1
+
+	move.w	#11*2-1,d1
+@@:
+	.rept	4*8/2
+	move.l	(a1)+,(a0)+
+	.endm
+	lea.l	$40(a0),a0
+	dbra	d1,@b
+
+	tst.l	d0
+	bmi		@f
+	movea.l	d0,a1
+	IOCS	__B_SUPER			* ユーザーモード
+@@:
+	rts
+
+
+	.end
