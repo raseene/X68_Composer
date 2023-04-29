@@ -7,7 +7,7 @@
 #include "common.h"
 #include "app.h"
 #include "Sound.h"
-#include "Composer\Composer.h"
+#include "Composer/Composer.h"
 #include <io.h>
 
 
