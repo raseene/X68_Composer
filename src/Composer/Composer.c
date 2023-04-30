@@ -196,8 +196,8 @@ int		apic_load(const char*, int, int);		// PICファイル読み込み
 	B_WPOKE((UWORD*)0xe82500, 0x06e4);			// プライオリティ設定
 
 	if ( apic_load("GRAPHIC\\BACK.PIC", 0, 0) ) {								// 背景PIC描画
-//		set_error("ファイル \"GRAPHIC\\BACK.PIC\" が開けません\n");
-//		return	FALSE;
+		set_error("ファイル \"GRAPHIC\\BACK.PIC\" が開けません\n");
+		return	FALSE;
 	}
 
 	if ( !load_sprite("GRAPHIC\\COMPOSER.SP", "GRAPHIC\\COMPOSER.PAL") ) {		// スプライト読み込み
